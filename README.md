@@ -24,7 +24,7 @@ cd choco
 make
 ```
 
-Copy choco, choco.ini and play to the folder that has your WAD files (for example /home/pi/wad).
+Copy *choco*, *choco.ini* and *play* to the folder that has your WAD files (for example */home/pi/wad*).
 
 ```console
 cp choco /home/pi/wad
