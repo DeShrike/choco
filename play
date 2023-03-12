@@ -9,7 +9,7 @@ do
 	selection=$?
 
 	if [ $selection -eq 1 ]; then
-		doom
+		chocolate-doom -iwad doom.wad
 	fi
 	if [ $selection -eq 2 ]; then
 		chocolate-doom -file doom2.wad
