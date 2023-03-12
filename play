@@ -1,0 +1,34 @@
+#!/bin/bash
+
+selection=99
+
+while [ $selection -ne 0 ]
+do
+
+	./choco
+	selection=$?
+
+	if [ $selection -eq 1 ]; then
+		doom
+	fi
+	if [ $selection -eq 2 ]; then
+		chocolate-doom -file doom2.wad
+	fi
+	if [ $selection -eq 3 ]; then
+		heretic
+	fi
+	if [ $selection -eq 4 ]; then
+		hexen
+	fi
+	if [ $selection -eq 5 ]; then
+		strife
+	fi
+	if [ $selection -eq 6 ]; then
+		chocolate-doom -file plutonia.wad
+	fi
+	if [ $selection -eq 7 ]; then
+		chocolate-doom -file tnt.wad
+	fi
+
+done
+

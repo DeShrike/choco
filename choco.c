@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <termios.h>
 #include <string.h>
+#include <time.h>
+#include <sys/ioctl.h>
 #include "ini.h"
 
 #define INI_FILENAME "./choco.ini"
@@ -14,36 +16,38 @@
 #define GAMECOUNT 7
 
 char* games[GAMECOUNT] = { "doom", "doom2", "heretic", "hexen", "strife", "plutonia", "tnt" };
-char* commands[GAMECOUNT] = {
-    "doom",
-    "chocolcate-doom -file doom2.wad",
-    "heretic",
-    "hexen",
-    "strife",
-    "chocolcate-doom -file plutonia.wad",
-    "chocolcate-doom -file tnt.wad",
-};
+
+/*
+commands:
+    doom
+    chocolcate-doom -file doom2.wad
+    heretic
+    hexen
+    strife
+    chocolcate-doom -file plutonia.wad
+    chocolcate-doom -file tnt.wad
+*/
 
 char* doom_figlet[] = {
     " :::::::-.      ...         ...     .        :   ",
     "  ;;,   `';, .;;;;;;;.   .;;;;;;;.  ;;,.    ;;;  ",
-    " `[[     [[,[[     \\[[,,[[     \\[[,[[[[, ,[[[[, ",
-    "  $$,    $$$$$,     $$$$$$,     $$$$$$$$$$$\"$$$ ",
-    "  888_,o8P'\"888,_ _,88P\"888,_ _,88P888 Y88\" 888o",
-    "  MMMMP\"`    \"YMMMMMP\"   \"YMMMMMP\" MMM  M'  \"MMM",
+    " `[[     [[,[[     \\[[,,[[     \\[[,[[[[, ,[[[[,  ",
+    "  $$,    $$$$$,     $$$$$$,     $$$$$$$$$$$\"$$$  ",
+    "  888_,o8P'\"888,_ _,88P\"888,_ _,88P888 Y88\" 888o ",
+    "  MMMMP\"`    \"YMMMMMP\"   \"YMMMMMP\" MMM  M'  \"MMM ",
 };
 
 char* doom2_figlet[] = {
-    "d8888b.  .d88b.   .d88b.  .88b  d88. .d888b. ",
-    "88  `8D .8P  Y8. .8P  Y8. 88'YbdP`88 VP  `8D ",
-    "88   88 88    88 88    88 88  88  88    odD' ",
-    "88   88 88    88 88    88 88  88  88  .88'   ",
-    "88  .8D `8b  d8' `8b  d8' 88  88  88 j88.    ",
-    "Y8888D'  `Y88P'   `Y88P'  YP  YP  YP 888888D ",
+    " d8888b.  .d88b.   .d88b.  .88b  d88. .d888b. ",
+    " 88  `8D .8P  Y8. .8P  Y8. 88'YbdP`88 VP  `8D ",
+    " 88   88 88    88 88    88 88  88  88    odD' ",
+    " 88   88 88    88 88    88 88  88  88  .88'   ",
+    " 88  .8D `8b  d8' `8b  d8' 88  88  88 j88.    ",
+    " Y8888D'  `Y88P'   `Y88P'  YP  YP  YP 888888D ",
 };
 
 char* heretic_figlet[] = {
-    "'||'  '||'                           .    ||",
+    "'||'  '||'                           .    ||          ",
     " ||    ||    ....  ... ..    ....  .||.  ...    ....  ",
     " ||''''||  .|...||  ||' '' .|...||  ||    ||  .|   '' ",
     " ||    ||  ||       ||     ||       ||    ||  ||      ",
@@ -51,7 +55,7 @@ char* heretic_figlet[] = {
 };
 
 char* hexen_figlet[] = {
-    "          _______           _______  _ ",
+    "          _______           _______  _       ",
     "|\\     /|(  ____ \\|\\     /|(  ____ \\( (    /|",
     "| )   ( || (    \\/( \\   / )| (    \\/|  \\  ( |",
     "| (___) || (__     \\ (_) / | (__    |   \\ | |",
@@ -62,29 +66,29 @@ char* hexen_figlet[] = {
 };
 
 char* strife_figlet[] = {
-    " _______ __         __   ___ ",
-    "|     __|  |_.----.|__|.'  _|.-----. ",
-    "|__     |   _|   _||  ||   _||  -__| ",
-    "|_______|____|__|  |__||__|  |_____| ",
+    "  _______ __         __   ___         ",
+    " |     __|  |_.----.|__|.'  _|.-----. ",
+    " |__     |   _|   _||  ||   _||  -__| ",
+    " |_______|____|__|  |__||__|  |_____| ",
 };
 
 char* plutonia_figlet[] = {
-    " _______ __       __               __ ",
+    " _______ __       __               __       ",
     "|   _   |  .--.--|  |_.-----.-----|__.---.-.",
     "|.  1   |  |  |  |   _|  _  |     |  |  _  |",
     "|.  ____|__|_____|____|_____|__|__|__|___._|",
-    "|:  | ",
-    "|::.| ",
-    "`---' ",
+    "|:  |                                       ",
+    "|::.|                                       ",
+    "`---'                                       ",
 };
 
 char* tnt_figlet[] = {
     " _______ _   _ _______ ",
     "|__   __| \\ | |__   __|",
-    "   | |  |  \\| |  | |",
-    "   | |  | . ` |  | |",
-    "   | |  | |\\  |  | |",
-    "   |_|  |_| \\_|  |_|",
+    "   | |  |  \\| |  | |   ",
+    "   | |  | . ` |  | |   ",
+    "   | |  | |\\  |  | |   ",
+    "   |_|  |_| \\_|  |_|   ",
 };
 
 #define DOOM_ROWS (sizeof(doom_figlet) / sizeof(char*))
@@ -123,16 +127,40 @@ char* DIMMAGENTA = "\033[35;2m";
 char* DIMCYAN = "\033[36;2m";
 char* DIMWHITE = "\033[37;2m";
 
+int figlet_x[] = { 0, 55, 5, 62, 4, 55, 25 };
+int figlet_y[] = { 0, 4, 10, 12, 17, 21, 23 };
+int figlet_color[] = { 33, 32, 31, 34, 35, 36, 32 };
+int figlet_color_bg[] = { 47, 47, 47, 47, 47, 47, 47 };
+int offsetx = 0;
+int offsety = 0;
+int terminal_width, terminal_height;
+bool highlite_bg = false;
+unsigned int blink_on_delay = CLOCKS_PER_SEC / 5;
+unsigned int blink_off_delay = CLOCKS_PER_SEC / 10;
+int blink_step = 1;
+clock_t blink_last_step_time;
+
+int getch()
+{
+    int r;
+    unsigned char c;
+    if ((r = read(0, &c, sizeof(c))) < 0) 
+    {
+        return r;
+    } 
+    else 
+    {
+        return c;
+    }
+}
+
 int kbhit()
 {
-    struct timeval tv;
+    struct timeval tv = { 0L, 0L };
     fd_set fds;
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
     FD_ZERO(&fds);
-    FD_SET(STDIN_FILENO, &fds); //STDIN_FILENO is 0
-    select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
-    return FD_ISSET(STDIN_FILENO, &fds);
+    FD_SET(0, &fds);
+    return select(1, &fds, NULL, NULL, &tv) > 0;
 }
 
 void nonblock(int state)
@@ -168,10 +196,15 @@ static int inihandler(void* config, const char* section, const char* name, const
 
     for (int i = 0; i < GAMECOUNT; i++)
     {
-        if (MATCH("choco", games[i]))
+        if (MATCH("games", games[i]))
         {
             enabled[i] = atoi(value);
         }
+    }
+
+    if (MATCH("highlite", "bg"))
+    {
+        highlite_bg = atoi(value);
     }
 
     return 1;
@@ -179,6 +212,16 @@ static int inihandler(void* config, const char* section, const char* name, const
 
 void init()
 {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    terminal_height = w.ws_row;
+    terminal_width = w.ws_col;
+
+    printf ("lines %d\n", w.ws_row);
+    printf ("columns %d\n", w.ws_col);
+
+    // calculate the width of every figlet
     for (int i = 0; i < GAMECOUNT; i++)
     {
         char **figlet = figlets[i];
@@ -194,18 +237,38 @@ void init()
         cols[i] = l;
     }
 
+    // calculate the offsets for centering
+    int maxx = 0;
+    int maxy = 0;
+    for (int i = 0; i < GAMECOUNT; i++)
+    {
+        if (figlet_y[i] + rows[i] > maxy)
+        {
+            maxy = figlet_y[i] + rows[i];
+        }
+
+        if (figlet_x[i] + cols[i] > maxx)
+        {
+            maxx = figlet_x[i] + cols[i];
+        }
+    }
+
+    offsetx = (terminal_width - maxx) / 2;
+    offsety = (terminal_height - maxy) / 2;
+
     if (ini_parse(INI_FILENAME, inihandler, NULL) < 0)
     {
         printf("Can't load '%s'\n", INI_FILENAME);
         return;
     }    
 
+    blink_last_step_time = clock();
+
     /*for (int i = 0; i < GAMECOUNT; i++)
     {
         printf("Game: %s\n", games[i]);
         printf("  Enabled: %d\n", enabled[i]);
         printf("  Rows/Cols: %d / %d\n", rows[i], cols[i]);
-        printf("  Command: %s\n", commands[i]);
         printf("\n");
     }*/
 }
@@ -235,7 +298,7 @@ void draw_figlet(int game, int col, int row, char* color)
     char **figlet = figlets[game];
     for (int r = 0; r < rows[game]; r++)
     {
-        move_cursor(row + r, col);
+        move_cursor(row + r + 1, col + 1);
         printf(color);
         printf(figlet[r]);
         printf(RESET);
@@ -244,15 +307,123 @@ void draw_figlet(int game, int col, int row, char* color)
     fflush(stdout);
 }
 
+void draw_figlet_centered(int game)
+{
+    char color[20];
+    sprintf(color, "\033[%d;1m", figlet_color[game]);
+    int x = (terminal_width - cols[game]) / 2;
+    draw_figlet(game, x, 2, color);
+    move_cursor(rows[game] + 4, 1);
+}
+
+void draw_figlets(int highlited)
+{
+    char color[20];
+    for (int i = 0; i < GAMECOUNT; i++)
+    {
+        sprintf(color, "\033[%d;2m", figlet_color[i]);
+        if (highlited == i)
+        {
+            if (highlite_bg)
+            {
+                sprintf(color, "\033[%d;%d;1m", figlet_color[i], figlet_color_bg[i]);
+            }
+            else
+            {
+                sprintf(color, "\033[%d;1m", figlet_color[i]);
+            }
+        }
+
+        if (!enabled[i])
+        {
+            strcpy(color, BRIGHTBLACK);
+        }
+
+        draw_figlet(i, figlet_x[i] + offsetx, figlet_y[i] + offsety, color);
+    }
+
+    fflush(stdout);
+}
+
+void draw_figlet_blink(int game)
+{
+    char color[20];
+    if (blink_step == 1)
+    {
+        sprintf(color, "\033[%d;1m", figlet_color[game]);
+    }
+    else
+    {
+        sprintf(color, "\033[%d;2m", figlet_color[game]);
+    }
+
+    draw_figlet(game, figlet_x[game] + offsetx, figlet_y[game] + offsety, color);
+    fflush(stdout);
+}
+
+int next_highlited(int c, int d)
+{
+    int l = GAMECOUNT * 2;
+    while (l > 0)
+    {
+        c = c + d;
+        if (c < 0)
+        {
+            c = GAMECOUNT;
+        }
+        else if (c >= GAMECOUNT)
+        {
+            c = 0;
+        }
+
+        if (enabled[c])
+        {
+            break;
+        }
+
+        l -= 1;
+    }
+
+    return c;
+}
+
+void check_blink(int game)
+{
+    clock_t current = clock();
+    if (blink_step == 1)
+    {
+        if ((double)(current - blink_last_step_time) > blink_on_delay)
+        // if (time(0) > (blink_last_step_time + blink_on_delay))
+        {
+            blink_step = 0;
+            draw_figlet_blink(game);
+            blink_last_step_time = current;
+        }
+    }
+    else
+    {
+        if ((double)(current - blink_last_step_time) > blink_off_delay)
+        // if (time(0) > (blink_last_step_time + blink_off_delay))
+        {
+            blink_step = 1;
+            draw_figlet_blink(game);
+            blink_last_step_time = current;
+        }
+    }
+}
+
 int loop()
 {
     char c;
     int i = 0;
     int previous = 0;
+    int highlited = 0;   // the selected game
+    int selection = 0;
 
     nonblock(NB_ENABLE);
     hide_cursor();
-    fflush(stdout);
+    draw_figlets(highlited);
+
     while (1)
     {
         usleep(1);
@@ -260,22 +431,58 @@ int loop()
 
         if (i != 0)
         {
-            c = fgetc(stdin);
-
-            printf("%d \n", (int)c);
-
-            if (c == 'q' || c == 'Q')
+            c = getch(stdin);
+            if (c == 27 && previous == 27)
             {
+                clear_screen();
+                move_cursor(1, 1);
                 break;
             }
+            else if (c == 'q' || c == 'Q')
+            {
+                clear_screen();
+                move_cursor(1, 1);
+                break;
+            }
+            else if (c == 10)
+            {
+                selection = highlited + 1;
+                clear_screen();
+                draw_figlet_centered(highlited);
+                break;
+            }
+            else if (c == '[' && previous == 27)
+            {
+                c = getch(stdin);
+                switch (c)
+                {
+                    case 'A':   // up
+                        highlited = next_highlited(highlited, -1);
+                        break;
+                    case 'B':   // down
+                        highlited = next_highlited(highlited, 1);
+                        break;
+                    case 'C':   // right
+                        highlited = next_highlited(highlited, 1);
+                        break;
+                    case 'D':   // left
+                        highlited = next_highlited(highlited, -1);
+                        break;
+                }
 
-            printf("%c\n", c);
+                draw_figlets(highlited);
+            }
+
+            previous = c;
         }
+        
+        check_blink(highlited);
+        sleep(0.2);
     }
 
     nonblock(NB_DISABLE);
     show_cursor();
-    return 0;
+    return selection;
 }
 
 int main(void)
@@ -283,22 +490,9 @@ int main(void)
     init();
     clear_screen();
 
-    draw_figlet(0, 5, 2, BRIGHTRED);
-    draw_figlet(1, 60, 6, BRIGHTYELLOW);
-    draw_figlet(2, 10, 12, BRIGHTBLUE);
-    draw_figlet(3, 67, 14, BRIGHTMAGENTA);
-    draw_figlet(4, 9, 19, BRIGHTCYAN);
-    draw_figlet(5, 60, 23, BRIGHTGREEN);
-    draw_figlet(6, 30, 25, BRIGHTWHITE);
-
     int selection = loop();
-
-    if (selection > 0)
-    {
-        clear_screen();
-        draw_figlet(selection - 1, 5, 6, "");
-    }
-
+    return selection;
+/*
     printf("0 %sBLACK%s   - %sBLACK%s\n", BRIGHTBLACK, RESET, DIMBLACK, RESET);
     printf("1 %sRED%s     - %sRED%s\n", BRIGHTRED, RESET, DIMRED, RESET);
     printf("2 %sGREEN%s   - %sGREEN%s\n", BRIGHTGREEN, RESET, DIMGREEN, RESET);
@@ -307,6 +501,5 @@ int main(void)
     printf("5 %sMAGENTA%s - %sMAGENTA%s\n", BRIGHTMAGENTA, RESET, DIMMAGENTA, RESET);
     printf("6 %sCYAN%s    - %sCYAN%s\n", BRIGHTCYAN, RESET, DIMCYAN, RESET);
     printf("7 %sWHITE%s   - %sWHITE%s\n", BRIGHTWHITE, RESET, DIMWHITE, RESET);
-
-    return selection;
+*/
 }
